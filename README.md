@@ -1,13 +1,13 @@
 <div align="center">
 
-# ***Aegis IT Support🛡️***
+# ***AssistIQ — Team Knowledge Assistant***
 ---
 
 ### ***🤖 Enterprise Knowledge Copilot • IT Support Agentic RAG***
 ***Private Knowledge Retrieval • Evidence Grading • Web Fallback • Query Rewrite & Retry • Grounded Answers***
 
 <p align="center">
-<img src="https://readme-typing-svg.herokuapp.com?font=Poppins&weight=600&size=24&duration=3500&pause=1000&color=10B981&center=true&vCenter=true&width=900&lines=Aegis+Enterprise+Knowledge+Copilot;Agentic+RAG+%7C+LangGraph+%7C+Grounded+Answers;Private+KB+First%2C+Web+Only+When+Needed;Built+by+Ankit+Gupta"/>
+<img src="https://readme-typing-svg.herokuapp.com?font=Poppins&weight=600&size=24&duration=3500&pause=1000&color=10B981&center=true&vCenter=true&width=900&lines=AssistIQ+Team+Knowledge+Assistant;Agentic+RAG+%7C+LangGraph+%7C+Grounded+Answers;Private+KB+First%2C+Web+Only+When+Needed;Built+by+Ankit+Gupta"/>
 </p>
 
 <p align="center">
@@ -21,36 +21,36 @@
 
 ---
 
-### ***🌟 About Aegis***
+### ***🌟 About AssistIQ***
 
-***Aegis is an enterprise IT-support copilot built on an agentic RAG workflow. It answers questions from your company's private knowledge base first, and reaches out to the external web only when the internal evidence is weak.***
+***AssistIQ is a team knowledge assistant built on an agentic RAG workflow. It answers questions from your company's private knowledge base first, and reaches out to the external web only when the internal evidence is weak.***
 
 ***The system uses a **LangGraph** workflow that routes the question, retrieves private documents, grades the evidence, falls back to web search when needed, rewrites and retries weak queries, and finally produces a grounded answer, while showing every decision live in an Agent Trace panel.***
 
 <p align="center">
 <a href="https://aegis-it.onrender.com/" target="_blank">
-<img src="https://img.shields.io/badge/🚀%20Live%20Demo-Visit%20Aegis-10B981?style=for-the-badge">
+<img src="https://img.shields.io/badge/🚀%20Existing%20Demo-Visit%20Aegis-10B981?style=for-the-badge">
 </a>
 </p>
 </div>
 
 ---
 
-### ***🌐 Live Demo***
+### ***🌐 Existing Hosted Demo***
 
-***Web Application 👉 [Aegis – IT Support Agentic RAG](https://aegis-it.onrender.com/)***
+***The existing hosted instance is the earlier Aegis deployment; deploy this repository to publish the AssistIQ experience. 👉 [Open existing demo](https://aegis-it.onrender.com/)***
 
 ---
 
-### ***📸 Project Preview***
+### ***📸 Previous UI Preview***
 
 <p align="center">
-<img src="./preview/image.png" width="100%" alt="Aegis UI Preview">
+<img src="./preview/image.png" width="100%" alt="Previous Aegis interface, before the AssistIQ redesign">
 </p>
 
 ---
 
-### ***✅ What Aegis Can Do***
+### ***✅ What AssistIQ Can Do***
 
 - 💬 Chat-style IT support assistant
 - 🔒 Private company knowledge retrieval first
@@ -131,7 +131,7 @@ Generate Grounded Answer
 Return Answer + Final Source
 ```
 
-***Unlike a basic RAG chatbot, Aegis does not blindly answer from whatever it retrieves. It evaluates its own evidence and chooses the next action, which is what makes it **agentic**.***
+***Unlike a basic RAG chatbot, AssistIQ does not blindly answer from whatever it retrieves. It evaluates its own evidence and chooses the next action, which is what makes it **agentic**.***
 
 ---
 
@@ -168,30 +168,34 @@ Return Answer + Final Source
 ### ***📁 Project Structure***
 
 ```text
-Aegis/
+AssistIQ/
 │
 ├── agent/
-│   ├── api/                        # API routes
-│   ├── core/                       # Core configuration and workflow logic
-│   ├── rag/                        # Retrieval and knowledge-base pipeline
-│   ├── services/                   # LLM, search and supporting services
+│   ├── api/                        # FastAPI routes
+│   ├── core/                       # Application configuration and logging
+│   ├── rag/                        # LangGraph workflow and vector search
+│   ├── services/                   # Document ingestion and audit logging
 │   └── main.py                     # Application entrypoint
-│
-├── data/                           # Knowledge base data
-├── notebook/                       # Experiments and prototyping notebooks
-├── preview/
-│   └── ui.png                      # Project UI screenshot
-├── ui/                             # Frontend (chat UI + Agent Trace panel)
-├── uploads/                        # Uploaded company documents
-│
-├── .dockerignore
-├── .env                            # Environment variables (not committed)
-├── .gitignore
-├── Dockerfile                      # Docker configuration
-├── ingest_sample_knowledge.py      # Ingest sample documents into the KB
-├── requirements.txt                # Python dependencies
-└── schema.py                       # Request/response schemas
+├── data/
+│   └── sample_kb/                  # Example documents (included in the image)
+├── ui/
+│   ├── static/                     # AssistIQ styles and browser code
+│   └── templates/                  # AssistIQ page
+├── uploads/                        # Runtime document uploads (not in the image)
+├── notebook/                       # Optional development experiment
+├── preview/                        # Previous UI screenshot for this README
+├── .dockerignore                   # Keeps local/development files out of Docker
+├── .gitignore                      # Ignores credentials, caches, and local data
+├── Dockerfile
+├── ingest_sample_kb.py             # Index sample documents into Pinecone
+└── requirements.txt
 ```
+
+The Docker build intentionally excludes local virtual environments, uploaded
+documents, audit-database files, Python caches, the notebook, and the previous
+UI screenshot. The sample knowledge-base Markdown files remain in the image.
+Keep real credentials in the hosting provider's environment settings, not in
+the repository.
 
 ---
 
@@ -209,16 +213,32 @@ source venv/bin/activate        # Windows: venv\Scripts\activate
 # 3. Install dependencies
 pip install -r requirements.txt
 
-# 4. Configure environment variables
-cp .env.example .env            # PowerShell: Copy-Item .env.example .env
-# Add GROQ_API_KEY, TAVILY_API_KEY, PINECONE_API_KEY, and a unique ADMIN_API_KEY
+# 4. Configure environment variables in a local .env file or your host's secret settings
+# GROQ_API_KEY, PINECONE_API_KEY, TAVILY_API_KEY, ADMIN_API_KEY
 
 # 5. Ingest the sample knowledge base
-python ingest_sample_knowledge.py
+python ingest_sample_kb.py
 
 # 6. Run the application
 uvicorn agent.main:app --reload
 ```
+
+AssistIQ reads provider credentials from environment variables (or a local,
+git-ignored `.env` file). Never put provider keys in browser code or commit
+them to the repository:
+
+| Variable | Used for | Required for |
+|---|---|---|
+| `GROQ_API_KEY` | Language model | All assistant answers |
+| `PINECONE_API_KEY` | Private vector search | Company knowledge retrieval |
+| `TAVILY_API_KEY` | External web search | Web fallback when private evidence is weak |
+| `ADMIN_API_KEY` | Protected document uploads | Adding documents from the UI; choose a unique secret |
+
+The **Deployment setup** panel shows whether these variables are configured;
+it never displays their values. A green status confirms configuration is
+present, not that remote credentials, network access, or a Pinecone index have
+been verified. Set these values in your hosting provider's secret/environment
+settings before deployment.
 
 ### ***🐳 Run with Docker***
 
@@ -232,11 +252,16 @@ The container listens on port `8080`; the command above exposes it locally at
 the configured Pinecone index dimension; the default MiniLM model produces
 384-dimensional vectors.
 
+On Render, configure the four variables in the deployment table above as
+secret environment variables. The live `/api/health` check confirms the app is
+responding; `/api/status` reports whether configuration is present. Neither
+check validates external provider credentials or performs an AI inference.
+
 ---
 
 ### ***🧪 Why Grounded Answers Matter***
 
-Aegis is designed to reduce hallucination in enterprise support:
+AssistIQ is designed to reduce hallucination in enterprise support:
 
 ```text
 Private KB Evidence Found?
@@ -293,7 +318,7 @@ This keeps internal policy answers tied to company documents and uses the web on
 
 ## ***💼 Why This Project Is Valuable for an AI Engineer Portfolio***
 
-Aegis demonstrates an end-to-end agentic AI application rather than only a standalone model.
+AssistIQ demonstrates an end-to-end agentic AI application rather than only a standalone model.
 
 ```text
 Retrieval-Augmented Generation
@@ -335,7 +360,7 @@ Cloud Deployment
 
 ## ***🛡️ Safety Notice***
 
-Aegis is an educational and demonstration project. Its answers should not replace official IT, security, or compliance guidance. Always verify critical decisions with your organization's responsible team.
+AssistIQ is an educational and demonstration project. Its answers should not replace official IT, security, or compliance guidance. Always verify critical decisions with your organization's responsible team.
 
 ---
 
@@ -355,7 +380,7 @@ Aegis is an educational and demonstration project. Its answers should not replac
 
 ### ***⭐ Support the Project***
 
-If you find Aegis useful or interesting:
+If you find AssistIQ useful or interesting:
 
 - ⭐ Star the repository
 - 🍴 Fork the project
@@ -367,7 +392,7 @@ If you find Aegis useful or interesting:
 
 <div align="center">
 
-### ***Aegis IT: Complete Compnay IT Support Assistant System 🛡️***
+### ***AssistIQ: Team Knowledge Assistant***
 
 ***Ask Privately. Verify Smartly. Answer with Evidence.***
 

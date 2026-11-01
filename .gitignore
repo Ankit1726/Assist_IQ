@@ -1,4 +1,11 @@
-venv/ 
-.env 
-dist*/
+venv/
+.venv/
+env/
+.env
+dist/
 __pycache__/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+data/audit.db*
+uploads/

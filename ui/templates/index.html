@@ -1,111 +1,171 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#06080f" />
-    <title>Company Copilot</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700&display=swap"
-        rel="stylesheet" />
-    <link rel="stylesheet" href="/static/css/style.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0c1018" />
+  <meta name="description" content="AssistIQ — grounded answers for your team's knowledge and support questions." />
+  <title>AssistIQ 🧠 Team knowledge assistant</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
 </head>
 
 <body>
-    <div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+  <div class="app-shell">
     <div id="scrim" class="scrim"></div>
 
-    <div class="shell">
-        <aside class="sidebar" id="sidebar">
-            <div>
-                <div class="brand-badge">Company Copilot</div>
-                <h1>IT Support<br />Agentic RAG</h1>
-                <p class="muted">Private company knowledge first. External web only when evidence is weak.</p>
-            </div>
+    <aside class="sidebar" id="sidebar" aria-label="Workspace navigation">
+      <a class="brand" href="/" aria-label="AssistIQ home">
+        <span class="brand-mark" aria-hidden="true">A</span>
+        <span class="brand-copy"><strong>AssistIQ 🧠</strong><small>TEAM KNOWLEDGE</small></span>
+      </a>
 
-            <div class="workflow-card">
-                <h3>LangGraph Workflow</h3>
-                <div class="flow-step">1. Route question</div>
-                <div class="flow-step">2. Retrieve private KB</div>
-                <div class="flow-step">3. Grade evidence</div>
-                <div class="flow-step">4. Web fallback if weak</div>
-                <div class="flow-step">5. Rewrite &amp; retry</div>
-                <div class="flow-step">6. Grounded answer</div>
-            </div>
+      <div class="workspace-label">WORKSPACE</div>
+      <button class="nav-item active" type="button" aria-current="page">
+        <span class="nav-icon" aria-hidden="true">✳</span> Ask AssistIQ ✨
+        <span class="nav-shortcut">↵</span>
+      </button>
 
-            <div>
-                <button id="openUpload" class="secondary-btn" style="width:100%">+ Add Company Document</button>
-                <p class="made" style="margin-top:14px">Made With <span class="heart">💓</span> by <b>Ankit</b></p>
-            </div>
-        </aside>
-
-        <main class="main">
-            <header class="topbar">
-                <div class="top-left">
-                    <button id="openMenu" class="icon-btn" aria-label="Open menu">☰</button>
-                    <div><span class="status-dot"></span><span>Aegis:Enterprise Knowledge Copilot </span></div>
-                </div>
-                <div class="top-left">
-                    <span class="pill">Agentic RAG</span>
-                    <button id="openTrace" class="icon-btn" aria-label="Open agent trace">Trace</button>
-                </div>
-            </header>
-
-            <section id="chat" class="chat-area" aria-live="polite">
-                <div class="message assistant">
-                    <div class="avatar">AI</div>
-                    <div class="bubble">
-                        <strong>How can I help with IT support?</strong>
-                        <p>Try: “How do I connect to the company VPN?” or ask a question that may require current
-                            external vendor information.</p>
-                    </div>
-                </div>
-            </section>
-
-            <section class="composer-wrap">
-                <div class="examples">
-                    <button class="example">How do I connect to the company VPN..?</button>
-                    <button class="example">What is our password reset policy..?</button>
-                    <button class="example">What is the latest Microsoft Teams outage guidance..?</button>
-                </div>
-                <form id="chatForm" class="composer">
-                    <textarea id="question" rows="2" placeholder="Ask an IT support question ✨" required></textarea>
-                    <button type="submit" class="send-btn">Ask Agent</button>
-                </form>
-            </section>
-            <div class="footer">Made With <span class="heart">💓</span> by <b>Ankit</b></div>
-        </main>
-
-        <aside class="trace-panel" id="tracePanel">
-            <h2>Agent Trace</h2>
-            <p class="muted">Watch LangGraph decisions while the request runs.</p>
-            <div id="trace" class="trace-list">
-                <div class="empty">No request yet.</div>
-            </div>
-            <div class="source-box">
-                <span>Final Source</span>
-                <strong id="sourceUsed">—</strong>
-            </div>
-        </aside>
-    </div>
-
-    <div id="uploadModal" class="modal hidden">
-        <div class="modal-card">
-            <div class="modal-head">
-                <h2>Ingest Company Document</h2><button id="closeUpload" aria-label="Close">×</button>
-            </div>
-            <p class="muted">Upload PDF, TXT, Markdown, or DOCX. The document is chunked, embedded, and indexed into
-                Pinecone.</p>
-            <input id="adminKey" type="password" placeholder="Admin API key" />
-            <input id="fileInput" type="file" accept=".pdf,.txt,.md,.docx" />
-            <button id="uploadBtn" class="send-btn full">Index Document</button>
-            <div id="uploadStatus" class="upload-status"></div>
+      <section class="sidebar-section" aria-labelledby="knowledgeTitle">
+        <div class="section-heading">
+          <h2 id="knowledgeTitle">Your knowledge</h2>
+          <span class="section-indicator" aria-hidden="true"></span>
         </div>
-    </div>
+        <p class="sidebar-description">Answers start with your team's private documents. Web sources are used only when
+          needed.</p>
+        <button id="openUpload" class="upload-trigger" type="button">
+          <span aria-hidden="true">＋</span> Add a document
+        </button>
+      </section>
 
-    <script src="/static/js/app.js"></script>
+      <section class="integration-card" aria-labelledby="integrationTitle">
+        <div class="integration-heading">
+          <h2 id="integrationTitle">Deployment setup</h2>
+          <span id="appStatus" class="setup-pill checking" role="status">Checking</span>
+        </div>
+        <p id="integrationSummary" class="integration-summary">Checking server configuration…</p>
+        <ul id="integrationList" class="integration-list" aria-live="polite">
+          <li class="integration-row"><span class="integration-dot checking"></span><span>Loading integrations</span>
+          </li>
+        </ul>
+        <p class="integration-note">Provider keys stay on the server. Configure them as environment variables or
+          deployment secrets.</p>
+      </section>
+
+      <div class="sidebar-footer">
+        <span class="secure-mark" aria-hidden="true">⌑</span>
+        <span>Private knowledge. Grounded answers.</span>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <div class="topbar-leading">
+          <button id="openMenu" class="mobile-menu icon-button" type="button"
+            aria-label="Open workspace navigation">☰</button>
+          <div class="breadcrumb"><span>AssistIQ</span><span class="breadcrumb-divider">/</span><strong>Ask a
+              question</strong></div>
+        </div>
+        <div class="topbar-actions">
+          <span class="privacy-badge"><span aria-hidden="true">●</span> Private knowledge first</span>
+          <button id="openTrace" class="trace-button" type="button" aria-label="Show assistant activity">
+            <span aria-hidden="true">⌁</span> Activity
+          </button>
+        </div>
+      </header>
+
+      <section id="chat" class="chat-area" aria-live="polite" aria-label="Conversation">
+        <div class="welcome-block">
+          <div class="welcome-eyebrow"><span class="welcome-spark" aria-hidden="true">✳</span> YOUR TEAM'S KNOWLEDGE,
+            MADE USEFUL</div>
+          <h1>How can I help<br />you today?</h1>
+          <p class="welcome-copy">Ask a question about your team's policies, tools, or processes. AssistIQ looks for a
+            grounded answer in your private knowledge first.</p>
+          <div class="welcome-note"><span class="note-icon" aria-hidden="true">↳</span><span>Answers include their
+              source. If the knowledge base doesn't have enough detail, AssistIQ can search the web.</span></div>
+        </div>
+
+        <div class="message assistant welcome-message">
+          <div class="avatar" aria-hidden="true">A</div>
+          <div class="bubble">
+            <strong>I'm ready when you are.</strong>
+            <p>Choose a prompt below or ask your own question. Please avoid sharing passwords or other sensitive
+              personal information.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="composer-area" aria-label="Ask AssistIQ">
+        <p class="prompt-label">A FEW IDEAS TO GET STARTED</p>
+        <div class="examples" aria-label="Suggested questions">
+          <button class="example" type="button"><span aria-hidden="true">⌘</span> Connecting to the company VPN</button>
+          <button class="example" type="button"><span aria-hidden="true">⤴</span> Password reset policy</button>
+          <button class="example" type="button"><span aria-hidden="true">◷</span> Current Microsoft Teams outage
+            guidance</button>
+        </div>
+        <form id="chatForm" class="composer">
+          <label class="sr-only" for="question">Your question</label>
+          <textarea id="question" rows="1" maxlength="5000" placeholder="Ask anything about your team's knowledge…"
+            required></textarea>
+          <div class="composer-footer">
+            <span class="composer-hint">AssistIQ can make mistakes. Verify critical information.</span>
+            <button id="sendButton" type="submit" class="send-button">
+              Ask AssistIQ <span aria-hidden="true">↗</span>
+            </button>
+          </div>
+        </form>
+      </section>
+      <footer class="app-footer">Made with <span aria-label="love">♥</span> by <strong>Ankit</strong></footer>
+    </main>
+
+    <aside class="activity-panel" id="tracePanel" aria-label="Assistant activity">
+      <div class="activity-header">
+        <div class="activity-icon" aria-hidden="true">⌁</div>
+        <div>
+          <h2>Assistant activity</h2>
+          <p>How your answer is put together</p>
+        </div>
+      </div>
+      <div class="activity-rule"></div>
+      <h3 class="activity-label">THIS REQUEST</h3>
+      <div id="trace" class="trace-list" aria-live="polite">
+        <div class="trace-empty"><span aria-hidden="true">◌</span><strong>No activity yet</strong><span>Your workflow
+            appears here after you ask a question.</span></div>
+      </div>
+      <section class="source-card" aria-live="polite">
+        <span class="source-label">ANSWER SOURCE</span>
+        <strong id="sourceUsed">Waiting for your first question</strong>
+        <p>Sources used to build the latest answer appear with the response.</p>
+      </section>
+      <p class="activity-footnote">Your question is processed by the configured AI services. Provider credentials are
+        never shown here.</p>
+    </aside>
+  </div>
+
+  <div id="uploadModal" class="modal hidden">
+    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="uploadTitle"
+      aria-describedby="uploadDescription">
+      <div class="modal-head">
+        <div><span class="modal-kicker">KNOWLEDGE BASE</span>
+          <h2 id="uploadTitle">Add a document</h2>
+        </div>
+        <button id="closeUpload" class="close-button" type="button" aria-label="Close dialog">×</button>
+      </div>
+      <p id="uploadDescription" class="modal-description">Add a trusted company document so AssistIQ can use it when
+        answering future questions.</p>
+      <label class="field-label" for="adminKey">Document admin key</label>
+      <input id="adminKey" type="password" autocomplete="current-password" placeholder="Enter your admin key" />
+      <p class="field-help">This key is sent to your server only to authorize this upload.</p>
+      <label class="field-label file-label" for="fileInput">Choose a document</label>
+      <input id="fileInput" type="file" accept=".pdf,.txt,.md,.docx" />
+      <p class="field-help">Supported formats: PDF, TXT, Markdown, DOCX.</p>
+      <button id="uploadBtn" class="send-button upload-submit" type="button">Index document <span
+          aria-hidden="true">↗</span></button>
+      <div id="uploadStatus" class="upload-status" role="status" aria-live="polite"></div>
+    </section>
+  </div>
+
+  <script src="/static/js/app.js" defer></script>
 </body>
+
 </html>

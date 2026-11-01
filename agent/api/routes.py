@@ -1,5 +1,6 @@
 from pathlib import Path
 import logging
+import hmac
 from pydantic import BaseModel, Field
 from fastapi import APIRouter, UploadFile, File, HTTPException, Header
 
@@ -21,6 +22,35 @@ class ChatRequest(BaseModel):
 @router.get("/health")
 def health():
     return {"status": "Ok", "service": settings.app_name}
+
+
+@router.get("/status")
+def status():
+    checks = {
+        "groq": {
+            "label": "AI responses (Groq)",
+            "configured": bool(settings.groq_api_key.strip()),
+        },
+        "pinecone": {
+            "label": "Private knowledge base (Pinecone)",
+            "configured": bool(settings.pinecone_api_key.strip()),
+        },
+        "tavily": {
+            "label": "External web fallback (Tavily)",
+            "configured": bool(settings.tavily_api_key.strip()),
+        },
+        "admin": {
+            "label": "Secure document uploads",
+            "configured": bool(settings.admin_api_key.strip())
+            and settings.admin_api_key.strip().casefold() != "change-me",
+        },
+    }
+    return {
+        "readiness": "ready"
+        if all(check["configured"] for check in checks.values())
+        else "configuration_required",
+        "checks": checks,
+    }
 
 
 @router.post("/chat")
@@ -46,7 +76,13 @@ def chat(payload: ChatRequest):
 
 @router.post("/ingest")
 async def ingest(file: UploadFile = File(...), x_admin_key: str = Header(default="")):
-    if x_admin_key != settings.admin_api_key:
+    configured_admin_key = settings.admin_api_key.strip()
+    if not configured_admin_key or configured_admin_key.casefold() == "change-me":
+        raise HTTPException(
+            status_code=503,
+            detail="Document uploads are unavailable until ADMIN_API_KEY is configured.",
+        )
+    if not hmac.compare_digest(x_admin_key, configured_admin_key):
         raise HTTPException(status_code=401, detail="Invalid admin key")
     suffix = Path(file.filename or "").suffix.lower()
     if suffix not in SUPPORTED:
@@ -55,8 +91,14 @@ async def ingest(file: UploadFile = File(...), x_admin_key: str = Header(default
         )
     upload_dir = Path(settings.upload_dir)
     upload_dir.mkdir(parents=True, exist_ok=True)
-    dest = upload_dir / Path(file.filename).name
-    dest.write_bytes(await file.read())
+    filename = Path(file.filename or "").name
+    if not filename:
+        raise HTTPException(status_code=400, detail="A filename is required")
+    contents = await file.read()
+    if not contents:
+        raise HTTPException(status_code=400, detail="The selected document is empty")
+    dest = upload_dir / filename
+    dest.write_bytes(contents)
     docs = load_file(dest)
     chunks = chunk_documents(docs)
     ids = add_documents(chunks)

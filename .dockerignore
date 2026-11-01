@@ -2,15 +2,20 @@
 .git
 .gitignore
 .vscode
-__pycache__
-*.pyc
-*.pyo
-*.pyd
-venv
-.venv
-env
 .pytest_cache
 tests
 *.log
+
+# Local environments and generated Python bytecode
+venv/
+.venv/
+env/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+
+# Local data and development-only assets
 data/audit.db*
-uploads/**
+uploads/
+notebook/
+preview/

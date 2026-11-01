@@ -7,7 +7,6 @@ pydantic-settings
 langgraph
 langchain-core
 langchain-community
-langchain-tavily
 langchain-pinecone
 langchain-text-splitters
 langchain-huggingface
