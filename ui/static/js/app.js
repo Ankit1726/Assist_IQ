@@ -2,12 +2,14 @@ const chat = document.getElementById("chat");
 const appShell = document.querySelector(".app-shell");
 const form = document.getElementById("chatForm");
 const question = document.getElementById("question");
+const groqApiKey = document.getElementById("groqApiKey");
 const trace = document.getElementById("trace");
 const sourceUsed = document.getElementById("sourceUsed");
 const sidebar = document.getElementById("sidebar");
 const tracePanel = document.getElementById("tracePanel");
 const scrim = document.getElementById("scrim");
 const modal = document.getElementById("uploadModal");
+const answerModal = document.getElementById("answerModal");
 const sendButton = document.getElementById("sendButton");
 const uploadButton = document.getElementById("uploadBtn");
 const openMenuButton = document.getElementById("openMenu");
@@ -15,6 +17,9 @@ const openTraceButton = document.getElementById("openTrace");
 const uploadLimit = document.getElementById("uploadLimit");
 const sidebarBreakpoint = window.matchMedia("(max-width: 760px)");
 const activityBreakpoint = window.matchMedia("(max-width: 1120px)");
+let activeModal = null;
+let previousFocus = null;
+let latestAnswer = null;
 
 function formatFileSize(bytes) {
   const megabyte = 1024 * 1024;
@@ -107,6 +112,8 @@ function scrollDown() {
 function addMessage(role, text, source = "", citations = []) {
   const wrapper = document.createElement("div");
   wrapper.className = `message ${role}`;
+  wrapper.dataset.answer = text;
+  wrapper.dataset.source = source;
 
   const citationsHtml = citations.length
     ? `<div class="citations"><strong>Sources</strong><br>${citations
@@ -122,11 +129,55 @@ function addMessage(role, text, source = "", citations = []) {
   const sourceHtml = source
     ? `<div class="answer-source">Source: ${escapeHtml(source)}</div>`
     : "";
+  const actionsHtml =
+    role === "assistant" && source
+      ? '<div class="answer-actions"><button type="button" data-answer-action="view">Open answer screen</button></div>'
+      : "";
   const avatar = role === "assistant" ? '<div class="avatar" aria-hidden="true">A</div>' : "";
 
-  wrapper.innerHTML = `${avatar}<div class="bubble">${formatText(text)}${sourceHtml}${citationsHtml}</div>`;
+  wrapper.innerHTML = `${avatar}<div class="bubble">${formatText(text)}${sourceHtml}${citationsHtml}${actionsHtml}</div>`;
+  if (role === "assistant" && source) {
+    wrapper.answerData = { question: "", answer: text, source, citations };
+  }
   chat.appendChild(wrapper);
   scrollDown();
+  return wrapper;
+}
+
+function showAnswerScreen(answer) {
+  latestAnswer = answer;
+  document.getElementById("answerQuestion").textContent = answer.question;
+  document.getElementById("answerContent").innerHTML = formatText(answer.answer);
+  document.getElementById("answerSource").textContent = `Source: ${answer.source}`;
+
+  const citations = document.getElementById("answerCitations");
+  citations.replaceChildren();
+  if (answer.citations.length) {
+    const heading = document.createElement("strong");
+    heading.textContent = "Sources";
+    citations.append(heading, document.createElement("br"));
+    answer.citations.forEach((citation, index) => {
+      if (index) citations.append(document.createElement("br"));
+      const title = citation?.title || "Source";
+      const url = safeCitationUrl(citation?.url || "");
+      if (url) {
+        const link = document.createElement("a");
+        link.href = url;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.textContent = title;
+        citations.append(link);
+      } else {
+        citations.append(document.createTextNode(title));
+      }
+    });
+    citations.classList.remove("hidden");
+  } else {
+    citations.classList.add("hidden");
+  }
+
+  document.getElementById("answerActionStatus").textContent = "";
+  openModal(answerModal, document.getElementById("closeAnswer"));
 }
 
 function showTyping() {
@@ -150,6 +201,30 @@ function renderTrace(items) {
   trace.innerHTML = safeItems.length
     ? safeItems.map((item) => `<div class="trace-item">${escapeHtml(item)}</div>`).join("")
     : '<div class="trace-item">No workflow activity was returned.</div>';
+}
+
+async function copyAnswer(text) {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+  } catch {
+    // Continue to the document-copy fallback when clipboard permissions are unavailable.
+  }
+
+  const field = document.createElement("textarea");
+  field.value = text;
+  field.setAttribute("readonly", "");
+  field.style.position = "fixed";
+  field.style.opacity = "0";
+  document.body.appendChild(field);
+  field.select();
+  const copied = document.execCommand("copy");
+  field.remove();
+  if (!copied) {
+    throw new Error("Clipboard access is unavailable.");
+  }
 }
 
 function renderIntegrations(status) {
@@ -226,6 +301,7 @@ async function askAgent(rawQuestion) {
   }
   question.setCustomValidity("");
   requestPending = true;
+  const requestGroqApiKey = groqApiKey.value.trim();
 
   chat.querySelector(".welcome-block")?.remove();
   chat.querySelector(".welcome-message")?.remove();
@@ -244,7 +320,11 @@ async function askAgent(rawQuestion) {
   try {
     const response = await fetch("/api/chat", {
       method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        ...(requestGroqApiKey ? { "X-Groq-API-Key": requestGroqApiKey } : {}),
+      },
       body: JSON.stringify({ question: value }),
     });
     const body = await response.text();
@@ -277,14 +357,18 @@ async function askAgent(rawQuestion) {
       direct: "Assistant response",
       insufficient_evidence: "Not enough reliable evidence",
     };
-    addMessage(
+    const source = sourceLabels[data.source_used] || data.source_used || "Source not specified";
+    const citations = Array.isArray(data.citations) ? data.citations : [];
+    const answerMessage = addMessage(
       "assistant",
       data.answer,
-      sourceLabels[data.source_used] || data.source_used || "Source not specified",
-      Array.isArray(data.citations) ? data.citations : [],
+      source,
+      citations,
     );
+    answerMessage.answerData.question = value;
+    showAnswerScreen({ question: value, answer: data.answer, source, citations });
     renderTrace(data.trace);
-    sourceUsed.textContent = sourceLabels[data.source_used] || data.source_used || "Not specified";
+    sourceUsed.textContent = source;
   } catch (error) {
     hideTyping();
     const message =
@@ -307,7 +391,7 @@ async function askAgent(rawQuestion) {
     document.querySelectorAll(".example").forEach((button) => {
       button.disabled = false;
     });
-    question.focus();
+    if (!activeModal) question.focus();
   }
 }
 
@@ -326,6 +410,54 @@ question.addEventListener("keydown", (event) => {
 question.addEventListener("input", () => {
   question.setCustomValidity("");
   resizeQuestion();
+});
+
+document.getElementById("toggleGroqKey").addEventListener("click", (event) => {
+  const button = event.currentTarget;
+  const showing = groqApiKey.type === "password";
+  groqApiKey.type = showing ? "text" : "password";
+  button.textContent = showing ? "Hide" : "Show";
+  button.setAttribute("aria-label", `${showing ? "Hide" : "Show"} Groq API key`);
+  button.setAttribute("aria-pressed", String(showing));
+});
+
+chat.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-answer-action]");
+  if (!button) return;
+
+  const message = button.closest(".message");
+  if (button.dataset.answerAction === "view" && message.answerData) {
+    showAnswerScreen(message.answerData);
+  }
+});
+
+document.getElementById("copyAnswer").addEventListener("click", async () => {
+  const status = document.getElementById("answerActionStatus");
+  try {
+    await copyAnswer(latestAnswer.answer);
+    status.textContent = "Answer copied.";
+  } catch {
+    status.textContent = "Copy unavailable. Select and copy the answer text.";
+  }
+});
+
+document.getElementById("exportAnswer").addEventListener("click", () => {
+  const report = document.getElementById("printReport");
+  const title = document.createElement("h1");
+  title.textContent = "AssistIQ answer";
+  const questionText = document.createElement("p");
+  questionText.className = "print-question";
+  questionText.textContent = latestAnswer.question;
+  const source = document.createElement("p");
+  source.className = "print-source";
+  source.textContent = `Source: ${latestAnswer.source}`;
+  const answerContent = document.getElementById("answerContent").cloneNode(true);
+  const citations = document.getElementById("answerCitations");
+  report.replaceChildren(title, questionText, source, answerContent);
+  if (!citations.classList.contains("hidden")) {
+    report.append(citations.cloneNode(true));
+  }
+  window.print();
 });
 
 function resizeQuestion() {
@@ -401,12 +533,23 @@ updateDrawerAccessibility();
 
 const openUploadButton = document.getElementById("openUpload");
 const closeUploadButton = document.getElementById("closeUpload");
-let previousFocus = null;
 
-function closeUploadModal() {
-  modal.classList.add("hidden");
-  document.body.classList.remove("modal-open");
+function openModal(target, focusTarget) {
+  previousFocus = document.activeElement;
+  activeModal = target;
+  closeDrawers(false);
+  document.body.classList.add("modal-open");
+  appShell.inert = true;
+  target.classList.remove("hidden");
+  focusTarget.focus();
+}
+
+function closeModal(target = activeModal) {
+  if (!target || target !== activeModal) return;
+  target.classList.add("hidden");
+  activeModal = null;
   appShell.inert = false;
+  document.body.classList.remove("modal-open");
   if (previousFocus?.isConnected && !previousFocus.closest("[inert]")) {
     previousFocus.focus();
   } else {
@@ -415,27 +558,26 @@ function closeUploadModal() {
 }
 
 openUploadButton.addEventListener("click", () => {
-  previousFocus = document.activeElement;
-  closeDrawers(false);
-  document.body.classList.add("modal-open");
-  appShell.inert = true;
-  modal.classList.remove("hidden");
-  document.getElementById("adminKey").focus();
+  openModal(modal, document.getElementById("adminKey"));
 });
-closeUploadButton.addEventListener("click", closeUploadModal);
+closeUploadButton.addEventListener("click", () => closeModal(modal));
+document.getElementById("closeAnswer").addEventListener("click", () => closeModal(answerModal));
 modal.addEventListener("click", (event) => {
-  if (event.target === modal) closeUploadModal();
+  if (event.target === modal) closeModal(modal);
+});
+answerModal.addEventListener("click", (event) => {
+  if (event.target === answerModal) closeModal(answerModal);
 });
 document.addEventListener("keydown", (event) => {
-  if (!modal.classList.contains("hidden")) {
+  if (activeModal) {
     if (event.key === "Escape") {
-      closeUploadModal();
+      closeModal(activeModal);
       event.preventDefault();
       return;
     }
     if (event.key === "Tab") {
       const focusable = [
-        ...modal.querySelectorAll(
+        ...activeModal.querySelectorAll(
           "button:not(:disabled), input:not(:disabled), [href], textarea:not(:disabled), [tabindex]:not([tabindex='-1'])",
         ),
       ].filter((element) => !element.hidden);

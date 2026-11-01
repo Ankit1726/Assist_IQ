@@ -18,6 +18,7 @@ class EvidenceGrade(BaseModel):
 
 class AgentState(TypedDict):
     question: str
+    groq_api_key: str
     current_query: str
     kb_docs: List[Document]
     web_results: str

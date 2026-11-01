@@ -17,8 +17,17 @@ __llm = None
 __fallback_llm = None
 
 
-def llm():
+def llm(api_key: str = ""):
     global __llm
+    request_api_key = api_key.strip()
+    if request_api_key:
+        return ChatGroq(
+            model=settings.groq_model,
+            temperature=0.2,
+            api_key=request_api_key,
+            timeout=settings.llm_timeout_seconds,
+            max_retries=0,
+        )
     if __llm is None:
         if not settings.groq_api_key:
             raise RuntimeError("GROQ_API_KEY is missing")
@@ -32,8 +41,10 @@ def llm():
     return __llm
 
 
-def fallback_llm():
+def fallback_llm(api_key: str = ""):
     global __fallback_llm
+    if api_key.strip():
+        return None
     fallback_api_key = settings.groq_fallback_api_key.strip()
     if not fallback_api_key or fallback_api_key == settings.groq_api_key.strip():
         return None
@@ -56,13 +67,13 @@ def with_rate_limit_fallback(primary, backup=None):
     )
 
 
-def llm_with_fallback():
-    return with_rate_limit_fallback(llm(), fallback_llm())
+def llm_with_fallback(api_key: str = ""):
+    return with_rate_limit_fallback(llm(api_key), fallback_llm(api_key))
 
 
-def structured_llm(schema, method: str):
-    primary = llm().with_structured_output(schema, method=method)
-    backup = fallback_llm()
+def structured_llm(schema, method: str, api_key: str = ""):
+    primary = llm(api_key).with_structured_output(schema, method=method)
+    backup = fallback_llm(api_key)
     if backup is None:
         return primary
     return with_rate_limit_fallback(
@@ -80,7 +91,9 @@ def source_label(source: object) -> str:
 
 
 def route_question(state: AgentState):
-    router = structured_llm(RouteDecision, method="json_mode")
+    router = structured_llm(
+        RouteDecision, method="json_mode", api_key=state["groq_api_key"]
+    )
     decision = router.invoke(f"""
         You route messages for an enterprise IT support assistant.
         Use kb for questions about company IT policies, VPN, password reset, MFA, laptop setup,
@@ -108,7 +121,9 @@ def retrieve_kb(state: AgentState):
 
 
 def grade_kb(state: AgentState):
-    grader = structured_llm(EvidenceGrade, method="json_mode")
+    grader = structured_llm(
+        EvidenceGrade, method="json_mode", api_key=state["groq_api_key"]
+    )
     context = "\n\n".join(
         f"Source: {d.metadata.get('source','unknown')}\n{d.page_content}"
         for d in state["kb_docs"]
@@ -171,7 +186,9 @@ def search_web(state: AgentState):
 
 
 def grade_web(state: AgentState):
-    grader = structured_llm(EvidenceGrade, method="json_mode")
+    grader = structured_llm(
+        EvidenceGrade, method="json_mode", api_key=state["groq_api_key"]
+    )
     grade = grader.invoke(f"""
         Question: {state['question']}
         Web evidence:\n{state['web_results']}
@@ -195,7 +212,7 @@ def after_web(
 
 
 def rewrite_query(state: AgentState):
-    rewritten = llm_with_fallback().invoke(f"""
+    rewritten = llm_with_fallback(state["groq_api_key"]).invoke(f"""
         Rewrite this IT support question for better private knowledge retrieval and vendor web search.
         Preserve intent, add useful technical keywords, do not answer, return only the query.
         Question: {state['question']}
@@ -212,7 +229,7 @@ def generate_from_kb(state: AgentState):
         f"[Source: {source_label(d.metadata.get('source'))}]\n{d.page_content}"
         for d in state["kb_docs"]
     )
-    answer = llm_with_fallback().invoke(f"""
+    answer = llm_with_fallback(state["groq_api_key"]).invoke(f"""
         You are an enterprise IT support copilot. Answer ONLY from the private company KB below.
         Be concise, actionable, and safe. If steps are present, present them clearly.
         Do not invent policy details. Mention that the answer is based on the company's private knowledge base.
@@ -234,7 +251,7 @@ def generate_from_kb(state: AgentState):
 
 
 def generate_from_web(state: AgentState):
-    answer = llm_with_fallback().invoke(f"""
+    answer = llm_with_fallback(state["groq_api_key"]).invoke(f"""
     You are an enterprise IT support copilot. The private company KB was insufficient.
     Answer ONLY from the web evidence below. Clearly say this is external web information and may need IT validation before changing company-managed systems.
     Question: {state['question']}\n\nWeb evidence:\n{state['web_results']}
@@ -248,7 +265,7 @@ def generate_from_web(state: AgentState):
 
 def direct_answer(state: AgentState):
     answer = (
-        llm_with_fallback().invoke(
+        llm_with_fallback(state["groq_api_key"]).invoke(
             f"Respond briefly and naturally to: {state['question']}"
         ).content
     )
@@ -316,9 +333,10 @@ def build_graph():
 agent_graph = build_graph()
 
 
-def ask(question: str):
+def ask(question: str, groq_api_key: str = ""):
     initial: AgentState = {
         "question": question,
+        "groq_api_key": groq_api_key,
         "current_query": question,
         "kb_docs": [],
         "web_results": "",
@@ -332,6 +350,8 @@ def ask(question: str):
     }
     started_at = perf_counter()
     try:
-        return agent_graph.invoke(initial)
+        result = agent_graph.invoke(initial)
+        result.pop("groq_api_key", None)
+        return result
     finally:
         logger.info("Chat workflow finished in %.2f seconds", perf_counter() - started_at)

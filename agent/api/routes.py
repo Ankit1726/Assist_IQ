@@ -5,6 +5,7 @@ from uuid import uuid4
 from zipfile import BadZipFile
 from docx.opc.exceptions import PackageNotFoundError
 import requests
+from groq import AuthenticationError
 from pydantic import BaseModel, Field, field_validator
 from fastapi import APIRouter, UploadFile, File, HTTPException, Header
 from pinecone.exceptions import PineconeException
@@ -42,8 +43,9 @@ def health():
 def status():
     checks = {
         "groq": {
-            "label": "AI responses (Groq)",
+            "label": "AI responses (Groq; request key supported)",
             "configured": bool(settings.groq_api_key.strip()),
+            "optional": True,
         },
         "groq_backup": {
             "label": "Groq backup key (optional)",
@@ -80,9 +82,15 @@ def status():
 
 
 @router.post("/chat")
-def chat(payload: ChatRequest):
+def chat(payload: ChatRequest, x_groq_api_key: str = Header(default="")):
+    groq_api_key = x_groq_api_key.strip()
+    if len(groq_api_key) > 512:
+        raise HTTPException(
+            status_code=400,
+            detail="The Groq API key must be 512 characters or fewer.",
+        )
     try:
-        result = ask(payload.question)
+        result = ask(payload.question, groq_api_key=groq_api_key)
         write_audit(payload.question, result["source_used"], result.get("trace", []))
 
         return {
@@ -92,6 +100,12 @@ def chat(payload: ChatRequest):
             "citations": result.get("citations", []),
             "rewritten_query": result.get("current_query", payload.question),
         }
+    except AuthenticationError as exc:
+        logger.warning("Chat request rejected due to Groq authentication failure")
+        raise HTTPException(
+            status_code=401,
+            detail="Groq rejected the API key. Check it and try again.",
+        ) from exc
     except Exception as exc:
         logger.exception("Chat request failed")
         raise HTTPException(
