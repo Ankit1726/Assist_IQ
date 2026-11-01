@@ -1,5 +1,6 @@
 from functools import lru_cache
 from pathlib import Path
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BASE_DIR = Path(__file__).resolve().parents[2]
@@ -18,6 +19,7 @@ class Settings(BaseSettings):
     tavily_timeout_seconds: float = 8
     top_k: int = 4
     max_retries: int = 0
+    max_upload_size_bytes: int = Field(default=10 * 1024 * 1024, gt=0)
     admin_api_key: str = ""
     audit_db_path: str = str(BASE_DIR / "data" / "audit.db")
     upload_dir: str = str(BASE_DIR / "uploads")
