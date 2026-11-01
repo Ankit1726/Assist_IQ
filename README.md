@@ -42,7 +42,7 @@
 
 ***👉 [HR-Assistent](https://assist-iq-6f00.onrender.com)***
 
-***👉 [Admin Password](HR@1234)***
+***👉 Admin Password:[HR@1234]***
 
 ---
 
