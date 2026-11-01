@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     app_name: str = "AssistIQ — Team Knowledge Assistant"
     app_env: str = "development"
     groq_api_key: str = ""
+    groq_fallback_api_key: str = ""
     tavily_api_key: str = ""
     pinecone_api_key: str = ""
     pinecone_index_name: str = "fde-it-support-rag"

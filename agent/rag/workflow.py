@@ -3,6 +3,7 @@ from time import perf_counter
 from typing import Literal
 
 import requests
+from groq import RateLimitError
 from langchain_groq import ChatGroq
 from langgraph.graph import StateGraph, START, END
 from agent.core.config import get_settings
@@ -13,6 +14,7 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 __llm = None
+__fallback_llm = None
 
 
 def llm():
@@ -30,6 +32,44 @@ def llm():
     return __llm
 
 
+def fallback_llm():
+    global __fallback_llm
+    fallback_api_key = settings.groq_fallback_api_key.strip()
+    if not fallback_api_key or fallback_api_key == settings.groq_api_key.strip():
+        return None
+    if __fallback_llm is None:
+        __fallback_llm = ChatGroq(
+            model=settings.groq_model,
+            temperature=0.2,
+            api_key=fallback_api_key,
+            timeout=settings.llm_timeout_seconds,
+            max_retries=0,
+        )
+    return __fallback_llm
+
+
+def with_rate_limit_fallback(primary, backup=None):
+    if backup is None:
+        return primary
+    return primary.with_fallbacks(
+        [backup], exceptions_to_handle=(RateLimitError,)
+    )
+
+
+def llm_with_fallback():
+    return with_rate_limit_fallback(llm(), fallback_llm())
+
+
+def structured_llm(schema, method: str):
+    primary = llm().with_structured_output(schema, method=method)
+    backup = fallback_llm()
+    if backup is None:
+        return primary
+    return with_rate_limit_fallback(
+        primary, backup.with_structured_output(schema, method=method)
+    )
+
+
 def add_trace(state: AgentState, message: str):
     return [*state.get("trace", []), message]
 
@@ -40,7 +80,7 @@ def source_label(source: object) -> str:
 
 
 def route_question(state: AgentState):
-    router = llm().with_structured_output(RouteDecision, method="json_mode")
+    router = structured_llm(RouteDecision, method="json_mode")
     decision = router.invoke(f"""
         You route messages for an enterprise IT support assistant.
         Use kb for questions about company IT policies, VPN, password reset, MFA, laptop setup,
@@ -68,7 +108,7 @@ def retrieve_kb(state: AgentState):
 
 
 def grade_kb(state: AgentState):
-    grader = llm().with_structured_output(EvidenceGrade, method="json_mode")
+    grader = structured_llm(EvidenceGrade, method="json_mode")
     context = "\n\n".join(
         f"Source: {d.metadata.get('source','unknown')}\n{d.page_content}"
         for d in state["kb_docs"]
@@ -131,7 +171,7 @@ def search_web(state: AgentState):
 
 
 def grade_web(state: AgentState):
-    grader = llm().with_structured_output(EvidenceGrade, method="json_mode")
+    grader = structured_llm(EvidenceGrade, method="json_mode")
     grade = grader.invoke(f"""
         Question: {state['question']}
         Web evidence:\n{state['web_results']}
@@ -155,7 +195,7 @@ def after_web(
 
 
 def rewrite_query(state: AgentState):
-    rewritten = llm().invoke(f"""
+    rewritten = llm_with_fallback().invoke(f"""
         Rewrite this IT support question for better private knowledge retrieval and vendor web search.
         Preserve intent, add useful technical keywords, do not answer, return only the query.
         Question: {state['question']}
@@ -172,7 +212,7 @@ def generate_from_kb(state: AgentState):
         f"[Source: {source_label(d.metadata.get('source'))}]\n{d.page_content}"
         for d in state["kb_docs"]
     )
-    answer = llm().invoke(f"""
+    answer = llm_with_fallback().invoke(f"""
         You are an enterprise IT support copilot. Answer ONLY from the private company KB below.
         Be concise, actionable, and safe. If steps are present, present them clearly.
         Do not invent policy details. Mention that the answer is based on the company's private knowledge base.
@@ -194,7 +234,7 @@ def generate_from_kb(state: AgentState):
 
 
 def generate_from_web(state: AgentState):
-    answer = llm().invoke(f"""
+    answer = llm_with_fallback().invoke(f"""
     You are an enterprise IT support copilot. The private company KB was insufficient.
     Answer ONLY from the web evidence below. Clearly say this is external web information and may need IT validation before changing company-managed systems.
     Question: {state['question']}\n\nWeb evidence:\n{state['web_results']}
@@ -208,7 +248,9 @@ def generate_from_web(state: AgentState):
 
 def direct_answer(state: AgentState):
     answer = (
-        llm().invoke(f"Respond briefly and naturally to: {state['question']}").content
+        llm_with_fallback().invoke(
+            f"Respond briefly and naturally to: {state['question']}"
+        ).content
     )
     return {
         "answer": answer,

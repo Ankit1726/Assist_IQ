@@ -36,23 +36,9 @@
 
 ---
 
-### ***🌐 Existing Hosted Demo***
+### ***🌐Live Demo***
 
-***The existing hosted instance is the earlier Aegis deployment; deploy this repository to publish the AssistIQ experience. 👉 [Open existing demo](https://aegis-it.onrender.com/)***
-
----
-
-### ***🚀 Deploy this version to Render***
-
-1. Create a **Web Service** from this repository and select the **Docker** runtime. The root `Dockerfile` builds and starts the app.
-2. Add these environment variables in Render's dashboard; never commit `.env` or paste provider keys into source files:
-   - `GROQ_API_KEY`
-   - `PINECONE_API_KEY`
-   - `TAVILY_API_KEY`
-   - `ADMIN_API_KEY` — use a unique, strong value to enable document uploads.
-3. Use `/api/health` as the health-check path. After deployment, open `/api/status` to confirm configuration, then test a chat request and a document upload with your own credentials.
-
-The setup indicator confirms that values are configured; it does not verify that provider credentials are valid or that external services are reachable. Uploaded source files use the service's local disk, which may be ephemeral; keep the indexed knowledge in Pinecone and retain original documents separately.
+***👉 [HR-Assistent](https://aegis-it.onrender.com)***
 
 ---
 

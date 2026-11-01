@@ -45,6 +45,13 @@ def status():
             "label": "AI responses (Groq)",
             "configured": bool(settings.groq_api_key.strip()),
         },
+        "groq_backup": {
+            "label": "Groq backup key (optional)",
+            "configured": bool(settings.groq_fallback_api_key.strip())
+            and settings.groq_fallback_api_key.strip()
+            != settings.groq_api_key.strip(),
+            "optional": True,
+        },
         "pinecone": {
             "label": "Private knowledge base (Pinecone)",
             "configured": bool(settings.pinecone_api_key.strip()),
@@ -61,7 +68,11 @@ def status():
     }
     return {
         "readiness": "ready"
-        if all(check["configured"] for check in checks.values())
+        if all(
+            check["configured"]
+            for check in checks.values()
+            if not check.get("optional", False)
+        )
         else "configuration_required",
         "checks": checks,
         "max_upload_size_bytes": settings.max_upload_size_bytes,

@@ -170,17 +170,26 @@ function renderIntegrations(status) {
   }
 
   const entries = Object.values(checks);
-  const configuredCount = entries.filter((entry) => entry?.configured === true).length;
-  const isReady = status.readiness === "ready" && configuredCount === entries.length;
+  const requiredEntries = entries.filter((entry) => entry?.optional !== true);
+  const configuredCount = requiredEntries.filter(
+    (entry) => entry?.configured === true,
+  ).length;
+  const isReady =
+    status.readiness === "ready" && configuredCount === requiredEntries.length;
   appStatus.textContent = isReady ? "Ready" : "Setup needed";
   appStatus.className = `setup-pill ${isReady ? "ready" : "needs-setup"}`;
   summary.textContent = isReady
     ? "Required services are configured. Credentials are stored server-side."
-    : `${configuredCount} of ${entries.length} required services configured. Add missing keys on the server.`;
+    : `${configuredCount} of ${requiredEntries.length} required services configured. Add missing keys on the server.`;
   list.innerHTML = entries
     .map((entry) => {
       const configured = entry?.configured === true;
-      return `<li class="integration-row"><span class="integration-dot ${configured ? "ready" : ""}"></span><span>${escapeHtml(entry?.label || "Service")}: ${configured ? "configured" : "needs setup"}</span></li>`;
+      const state = configured
+        ? "configured"
+        : entry?.optional === true
+          ? "not set (optional)"
+          : "needs setup";
+      return `<li class="integration-row"><span class="integration-dot ${configured ? "ready" : ""}"></span><span>${escapeHtml(entry?.label || "Service")}: ${state}</span></li>`;
     })
     .join("");
 }
