@@ -1,6 +1,6 @@
 <div align="center">
 
-# ***AssistIQ — Team Knowledge Assistant***
+# ***AssistIQ Team Knowledge Assistant***
 ---
 
 ### ***🤖 Enterprise Knowledge Copilot • IT Support Agentic RAG***
@@ -29,7 +29,7 @@
 
 <p align="center">
 <a href="https://assist-iq-6f00.onrender.com" target="_blank">
-<img src="https://img.shields.io/badge/🚀%20Existing%20Demo-Visit%20Aegis-10B981?style=for-the-badge">
+<img src="https://img.shields.io/badge/🚀%20Existing%20Demo-Visit%20AssistIQ-10B981?style=for-the-badge">
 </a>
 </p>
 </div>
