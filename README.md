@@ -28,7 +28,7 @@
 ***The system uses a **LangGraph** workflow that routes the question, retrieves private documents, grades the evidence, falls back to web search when needed, rewrites and retries weak queries, and finally produces a grounded answer, while showing every decision live in an Agent Trace panel.***
 
 <p align="center">
-<a href="https://aegis-it.onrender.com/" target="_blank">
+<a href="https://assist-iq-6f00.onrender.com" target="_blank">
 <img src="https://img.shields.io/badge/🚀%20Existing%20Demo-Visit%20Aegis-10B981?style=for-the-badge">
 </a>
 </p>
@@ -38,14 +38,20 @@
 
 ### ***🌐Live Demo***
 
-***👉 [HR-Assistent](https://aegis-it.onrender.com)***
+***👉 [HR-Assistent](https://assist-iq-6f00.onrender.com)***
 
 ---
 
-### ***📸 Previous UI Preview***
+### ***📸 Application Preview***
 
 <p align="center">
-<img src="./preview/live.png" width="100%" alt="Previous Aegis interface, before the AssistIQ redesign">
+<img src="./preview/live.png" width="100%" alt="App UI">
+</p>
+
+### ***📸 Application Result***
+
+<p align="center">
+<img src="./preview/result.png" width="100%" alt="Result UI">
 </p>
 
 ---
