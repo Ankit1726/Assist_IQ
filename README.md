@@ -45,7 +45,7 @@
 ### ***📸 Previous UI Preview***
 
 <p align="center">
-<img src="./preview/image.png" width="100%" alt="Previous Aegis interface, before the AssistIQ redesign">
+<img src="./preview/live.png" width="100%" alt="Previous Aegis interface, before the AssistIQ redesign">
 </p>
 
 ---
