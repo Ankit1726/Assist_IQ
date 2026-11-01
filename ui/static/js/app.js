@@ -1,4 +1,5 @@
 const chat = document.getElementById("chat");
+const appShell = document.querySelector(".app-shell");
 const form = document.getElementById("chatForm");
 const question = document.getElementById("question");
 const trace = document.getElementById("trace");
@@ -9,6 +10,25 @@ const scrim = document.getElementById("scrim");
 const modal = document.getElementById("uploadModal");
 const sendButton = document.getElementById("sendButton");
 const uploadButton = document.getElementById("uploadBtn");
+const openMenuButton = document.getElementById("openMenu");
+const openTraceButton = document.getElementById("openTrace");
+const uploadLimit = document.getElementById("uploadLimit");
+const sidebarBreakpoint = window.matchMedia("(max-width: 760px)");
+const activityBreakpoint = window.matchMedia("(max-width: 1120px)");
+
+function formatFileSize(bytes) {
+  const megabyte = 1024 * 1024;
+  return bytes >= megabyte
+    ? `${Math.round((bytes / megabyte) * 10) / 10} MB`
+    : `${bytes} bytes`;
+}
+
+function setUploadStatus(message, state = "") {
+  const status = document.getElementById("uploadStatus");
+  status.textContent = message;
+  status.className = `upload-status ${state}`;
+  status.setAttribute("aria-live", state === "error" ? "assertive" : "polite");
+}
 
 function escapeHtml(value = "") {
   return String(value).replace(
@@ -141,6 +161,13 @@ function renderIntegrations(status) {
   if (!checks || typeof checks !== "object") {
     throw new Error("The server returned an invalid setup status.");
   }
+  if (
+    Number.isSafeInteger(status.max_upload_size_bytes) &&
+    status.max_upload_size_bytes > 0
+  ) {
+    uploadLimit.dataset.maxBytes = String(status.max_upload_size_bytes);
+    uploadLimit.textContent = `Supported formats: PDF, TXT, Markdown, DOCX. Maximum size: ${formatFileSize(status.max_upload_size_bytes)}.`;
+  }
 
   const entries = Object.values(checks);
   const configuredCount = entries.filter((entry) => entry?.configured === true).length;
@@ -195,7 +222,7 @@ async function askAgent(rawQuestion) {
   chat.querySelector(".welcome-message")?.remove();
   addMessage("user", value);
   question.value = "";
-  question.style.height = "auto";
+  resizeQuestion();
   renderTrace(["Starting the AssistIQ workflow…"]);
   sourceUsed.textContent = "Preparing answer";
   sendButton.disabled = true;
@@ -222,10 +249,13 @@ async function askAgent(rawQuestion) {
     }
     if (!response.ok) {
       const message =
-        typeof data.detail === "string"
+        typeof data?.detail === "string"
           ? data.detail
           : `The assistant service is temporarily unavailable (HTTP ${response.status}). Please try again shortly.`;
       throw new Error(message);
+    }
+    if (!data || typeof data !== "object" || Array.isArray(data)) {
+      throw new Error("The assistant returned an invalid response. Please try again.");
     }
     if (typeof data.answer !== "string" || !data.answer.trim()) {
       throw new Error("The assistant returned an empty answer. Please try again.");
@@ -248,10 +278,19 @@ async function askAgent(rawQuestion) {
     sourceUsed.textContent = sourceLabels[data.source_used] || data.source_used || "Not specified";
   } catch (error) {
     hideTyping();
-    const message = error instanceof Error ? error.message : "The request failed. Please try again.";
+    const message =
+      error instanceof TypeError
+        ? "Couldn't reach AssistIQ. Check your connection and try again."
+        : error instanceof Error
+          ? error.message
+          : "The request failed. Please try again.";
     addMessage("assistant", message);
     renderTrace(["The request could not be completed. Check your connection and try again."]);
     sourceUsed.textContent = "Request failed";
+    if (!question.value.trim()) {
+      question.value = value;
+      resizeQuestion();
+    }
   } finally {
     requestPending = false;
     sendButton.disabled = false;
@@ -277,29 +316,79 @@ question.addEventListener("keydown", (event) => {
 
 question.addEventListener("input", () => {
   question.setCustomValidity("");
+  resizeQuestion();
+});
+
+function resizeQuestion() {
   question.style.height = "auto";
   question.style.height = `${Math.min(question.scrollHeight, 150)}px`;
-});
+}
 
 document.querySelectorAll(".example").forEach((button) => {
   button.addEventListener("click", () => askAgent(button.textContent.trim()));
 });
 
-function closeDrawers() {
+let drawerTrigger = null;
+
+function updateDrawerAccessibility() {
+  if (!sidebarBreakpoint.matches) sidebar.classList.remove("open");
+  if (!activityBreakpoint.matches) tracePanel.classList.remove("open");
+  const sidebarClosed = sidebarBreakpoint.matches && !sidebar.classList.contains("open");
+  const activityClosed = activityBreakpoint.matches && !tracePanel.classList.contains("open");
+  sidebar.inert = sidebarClosed;
+  sidebar.setAttribute("aria-hidden", String(sidebarClosed));
+  tracePanel.inert = activityClosed;
+  tracePanel.setAttribute("aria-hidden", String(activityClosed));
+  openMenuButton.setAttribute(
+    "aria-expanded",
+    String(sidebarBreakpoint.matches && sidebar.classList.contains("open")),
+  );
+  openTraceButton.setAttribute(
+    "aria-expanded",
+    String(activityBreakpoint.matches && tracePanel.classList.contains("open")),
+  );
+  const drawerOpen =
+    (sidebarBreakpoint.matches && !sidebarClosed) ||
+    (activityBreakpoint.matches && !activityClosed);
+  if (!drawerOpen) {
+    scrim.classList.remove("show");
+    drawerTrigger = null;
+  }
+}
+
+function closeDrawers(restoreFocus = true) {
+  const trigger = drawerTrigger;
   sidebar.classList.remove("open");
   tracePanel.classList.remove("open");
   scrim.classList.remove("show");
+  drawerTrigger = null;
+  updateDrawerAccessibility();
+  if (restoreFocus && trigger?.isConnected) trigger.focus();
 }
 
-function openDrawer(element) {
-  closeDrawers();
+function openDrawer(element, trigger) {
+  if (element === tracePanel && !activityBreakpoint.matches) return;
+  const wasOpen = element.classList.contains("open");
+  closeDrawers(false);
+  if (wasOpen) {
+    trigger.focus();
+    return;
+  }
+  drawerTrigger = trigger;
   element.classList.add("open");
   scrim.classList.add("show");
+  updateDrawerAccessibility();
+  element.querySelector("a[href], button:not(:disabled), [tabindex='-1']")?.focus({
+    preventScroll: true,
+  });
 }
 
-document.getElementById("openMenu").addEventListener("click", () => openDrawer(sidebar));
-document.getElementById("openTrace").addEventListener("click", () => openDrawer(tracePanel));
-scrim.addEventListener("click", closeDrawers);
+openMenuButton.addEventListener("click", () => openDrawer(sidebar, openMenuButton));
+openTraceButton.addEventListener("click", () => openDrawer(tracePanel, openTraceButton));
+scrim.addEventListener("click", () => closeDrawers());
+document.getElementById("closeTrace").addEventListener("click", () => closeDrawers());
+window.addEventListener("resize", updateDrawerAccessibility);
+updateDrawerAccessibility();
 
 const openUploadButton = document.getElementById("openUpload");
 const closeUploadButton = document.getElementById("closeUpload");
@@ -307,12 +396,20 @@ let previousFocus = null;
 
 function closeUploadModal() {
   modal.classList.add("hidden");
-  previousFocus?.focus();
+  document.body.classList.remove("modal-open");
+  appShell.inert = false;
+  if (previousFocus?.isConnected && !previousFocus.closest("[inert]")) {
+    previousFocus.focus();
+  } else {
+    (sidebarBreakpoint.matches ? openMenuButton : openUploadButton).focus();
+  }
 }
 
 openUploadButton.addEventListener("click", () => {
-  closeDrawers();
   previousFocus = document.activeElement;
+  closeDrawers(false);
+  document.body.classList.add("modal-open");
+  appShell.inert = true;
   modal.classList.remove("hidden");
   document.getElementById("adminKey").focus();
 });
@@ -321,35 +418,72 @@ modal.addEventListener("click", (event) => {
   if (event.target === modal) closeUploadModal();
 });
 document.addEventListener("keydown", (event) => {
+  if (!modal.classList.contains("hidden")) {
+    if (event.key === "Escape") {
+      closeUploadModal();
+      event.preventDefault();
+      return;
+    }
+    if (event.key === "Tab") {
+      const focusable = [
+        ...modal.querySelectorAll(
+          "button:not(:disabled), input:not(:disabled), [href], textarea:not(:disabled), [tabindex]:not([tabindex='-1'])",
+        ),
+      ].filter((element) => !element.hidden);
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first?.focus();
+      }
+    }
+    return;
+  }
   if (event.key === "Escape") {
     closeDrawers();
-    if (!modal.classList.contains("hidden")) closeUploadModal();
   }
 });
 
 uploadButton.addEventListener("click", async () => {
   const fileInput = document.getElementById("fileInput");
   const keyInput = document.getElementById("adminKey");
-  const status = document.getElementById("uploadStatus");
   const file = fileInput.files?.[0];
   const key = keyInput.value.trim();
 
   if (!key) {
-    status.textContent = "Enter the document admin key to continue.";
+    setUploadStatus("Enter the document admin key to continue.", "error");
     keyInput.focus();
     return;
   }
   if (!file) {
-    status.textContent = "Choose a PDF, TXT, Markdown, or DOCX file first.";
+    setUploadStatus("Choose a PDF, TXT, Markdown, or DOCX file first.", "error");
     fileInput.focus();
     return;
   }
   if (!/\.(pdf|txt|md|docx)$/i.test(file.name)) {
-    status.textContent = "That file type is not supported. Choose a PDF, TXT, Markdown, or DOCX file.";
+    setUploadStatus(
+      "That file type is not supported. Choose a PDF, TXT, Markdown, or DOCX file.",
+      "error",
+    );
+    return;
+  }
+  const maxUploadSize = Number(uploadLimit.dataset.maxBytes);
+  if (file.size === 0) {
+    setUploadStatus("The selected document is empty. Choose a file with content.", "error");
+    return;
+  }
+  if (Number.isSafeInteger(maxUploadSize) && maxUploadSize > 0 && file.size > maxUploadSize) {
+    setUploadStatus(
+      `The selected file exceeds the ${formatFileSize(maxUploadSize)} upload limit.`,
+      "error",
+    );
     return;
   }
 
-  status.textContent = "Uploading and indexing your document…";
+  setUploadStatus("Uploading and indexing your document…");
   uploadButton.disabled = true;
   const formData = new FormData();
   formData.append("file", file);
@@ -370,12 +504,34 @@ uploadButton.addEventListener("click", async () => {
       }
     }
     if (!response.ok) {
-      throw new Error(typeof data.detail === "string" ? data.detail : `Upload failed (HTTP ${response.status}).`);
+      throw new Error(
+        typeof data?.detail === "string" ? data.detail : `Upload failed (HTTP ${response.status}).`,
+      );
     }
-    status.textContent = `Indexed ${data.file || file.name}: ${data.chunks} chunks added to your knowledge base.`;
+    if (!data || typeof data !== "object" || Array.isArray(data)) {
+      throw new Error("The server returned an invalid upload response.");
+    }
+    if (
+      typeof data.file !== "string" ||
+      !data.file ||
+      !Number.isSafeInteger(data.chunks) ||
+      data.chunks < 0
+    ) {
+      throw new Error("The server returned an invalid upload response.");
+    }
+    setUploadStatus(
+      `Indexed ${data.file || file.name}: ${data.chunks} chunks added to your knowledge base.`,
+      "success",
+    );
     fileInput.value = "";
   } catch (error) {
-    status.textContent = error instanceof Error ? error.message : "Upload failed. Please try again.";
+    const message =
+      error instanceof TypeError
+        ? "Couldn't reach AssistIQ. Check your connection and try again."
+        : error instanceof Error
+          ? error.message
+          : "Upload failed. Please try again.";
+    setUploadStatus(message, "error");
   } finally {
     uploadButton.disabled = false;
   }

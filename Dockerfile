@@ -10,6 +10,7 @@ ENV FASTEMBED_CACHE_PATH=/opt/fastembed
 COPY requirements.txt .
 
 RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch \
     && pip install --no-cache-dir -r requirements.txt \
     && python -c "from fastembed import TextEmbedding; model = TextEmbedding(model_name='sentence-transformers/all-MiniLM-L6-v2', cache_dir='/opt/fastembed', threads=1); next(model.embed(['warm up embedding model']))"
 

@@ -61,14 +61,15 @@
     <main class="main-content">
       <header class="topbar">
         <div class="topbar-leading">
-          <button id="openMenu" class="mobile-menu icon-button" type="button"
-            aria-label="Open workspace navigation">☰</button>
+          <button id="openMenu" class="mobile-menu icon-button" type="button" aria-label="Open workspace navigation"
+            aria-controls="sidebar" aria-expanded="false">☰</button>
           <div class="breadcrumb"><span>AssistIQ</span><span class="breadcrumb-divider">/</span><strong>Ask a
               question</strong></div>
         </div>
         <div class="topbar-actions">
           <span class="privacy-badge"><span aria-hidden="true">●</span> Private knowledge first</span>
-          <button id="openTrace" class="trace-button" type="button" aria-label="Show assistant activity">
+          <button id="openTrace" class="trace-button" type="button" aria-label="Show assistant activity"
+            aria-controls="tracePanel" aria-expanded="false">
             <span aria-hidden="true">⌁</span> Activity
           </button>
         </div>
@@ -122,9 +123,11 @@
       <div class="activity-header">
         <div class="activity-icon" aria-hidden="true">⌁</div>
         <div>
-          <h2>Assistant activity</h2>
+          <h2 tabindex="-1">Assistant activity</h2>
           <p>How your answer is put together</p>
         </div>
+        <button id="closeTrace" class="close-button panel-close" type="button"
+          aria-label="Close assistant activity">×</button>
       </div>
       <div class="activity-rule"></div>
       <h3 class="activity-label">THIS REQUEST</h3>
@@ -143,7 +146,7 @@
   </div>
 
   <div id="uploadModal" class="modal hidden">
-    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="uploadTitle"
+    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="uploadTitle" tabindex="-1"
       aria-describedby="uploadDescription">
       <div class="modal-head">
         <div><span class="modal-kicker">KNOWLEDGE BASE</span>
@@ -154,11 +157,11 @@
       <p id="uploadDescription" class="modal-description">Add a trusted company document so AssistIQ can use it when
         answering future questions.</p>
       <label class="field-label" for="adminKey">Document admin key</label>
-      <input id="adminKey" type="password" autocomplete="current-password" placeholder="Enter your admin key" />
+      <input id="adminKey" type="password" autocomplete="off" placeholder="Enter your admin key" />
       <p class="field-help">This key is sent to your server only to authorize this upload.</p>
       <label class="field-label file-label" for="fileInput">Choose a document</label>
       <input id="fileInput" type="file" accept=".pdf,.txt,.md,.docx" />
-      <p class="field-help">Supported formats: PDF, TXT, Markdown, DOCX.</p>
+      <p id="uploadLimit" class="field-help">Supported formats: PDF, TXT, Markdown, DOCX.</p>
       <button id="uploadBtn" class="send-button upload-submit" type="button">Index document <span
           aria-hidden="true">↗</span></button>
       <div id="uploadStatus" class="upload-status" role="status" aria-live="polite"></div>

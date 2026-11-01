@@ -64,6 +64,7 @@ def status():
         if all(check["configured"] for check in checks.values())
         else "configuration_required",
         "checks": checks,
+        "max_upload_size_bytes": settings.max_upload_size_bytes,
     }
 
 
